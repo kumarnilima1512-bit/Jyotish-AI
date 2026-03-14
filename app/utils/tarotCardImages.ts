@@ -94,7 +94,6 @@ export const TAROT_IMAGES: Record<number, string> = {
   77: `${WM}/1/1c/Pents14.jpg`,
 }
 
-
 export function getCardImage(cardId: number): string {
   return TAROT_IMAGES[cardId] ?? TAROT_IMAGES[0]!
 }

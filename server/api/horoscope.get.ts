@@ -5,7 +5,7 @@
 import { defineEventHandler, getQuery, createError } from 'h3'
 
 function getApiKey(): string {
-  return process.env.ANTHROPIC_API_KEY ?? ''
+  return process.env.GEMINI_API_KEY ?? ''
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -299,9 +299,9 @@ Return ONLY valid JSON, no markdown, no commentary, exactly this shape:
 Score rubric: 9-10 = exceptional (benefic trine/sextile + favourable dasha), 7-8 = good, 5-6 = mixed, 3-4 = challenging (malefic aspects + difficult dasha), 1-2 = very difficult. Distribute scores realistically across all 12 signs — the average should be around 6.`
 
   const apiKey = getApiKey()
-  if (!apiKey) throw new Error('ANTHROPIC_API_KEY not configured on server')
+  if (!apiKey) throw new Error('GEMINI_API_KEY not configured on server')
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -317,7 +317,7 @@ Score rubric: 9-10 = exceptional (benefic trine/sextile + favourable dasha), 7-8
 
   if (!res.ok) {
     const err = await res.text()
-    throw new Error(`Anthropic API ${res.status}: ${err.slice(0, 200)}`)
+    throw new Error(`Gemini API ${res.status}: ${err.slice(0, 200)}`)
   }
 
   const data = await res.json() as { content: Array<{ type: string; text: string }> }
@@ -327,7 +327,7 @@ Score rubric: 9-10 = exceptional (benefic trine/sextile + favourable dasha), 7-8
 
   // Validate all 12 signs present
   const missing = SIGN_IDS.filter(id => !parsed[id])
-  if (missing.length) throw new Error(`Claude response missing signs: ${missing.join(', ')}`)
+  if (missing.length) throw new Error(`Gemini response missing signs: ${missing.join(', ')}`)
 
   return parsed
 }
