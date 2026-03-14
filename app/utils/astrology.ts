@@ -111,9 +111,9 @@ export function getDegInSign(lon: number): number {
 export function getNakshatra(lon: number): NakshatraInfo {
   const n = normalizeDeg(lon)
   const NAK_SIZE = 360 / 27
-  const nakIdx = Math.floor(n / NAK_SIZE) % 27
+  const nakIdx = Math.floor(n / NAK_SIZE)
   const pada = Math.floor((n % NAK_SIZE) / (NAK_SIZE / 4)) + 1
-  return { index: nakIdx, name: NAKSHATRA_NAMES[nakIdx] ?? '', pada }
+  return { index: nakIdx % 27, name: NAKSHATRA_NAMES[nakIdx % 27] ?? 'Ashwini', pada }
 }
 
 // ─── Julian Day Number ───────────────────────────────────────────────────────
@@ -240,9 +240,8 @@ function getGeocentricLon(planet: string, jd: number): number {
   const p   = helioXY(elements, T)
   const dx  = p.x - e.x
   const dy  = p.y - e.y
-  const dist = Math.sqrt(dx * dx + dy * dy)  // AU
+  const dist = Math.sqrt(dx * dx + dy * dy)
 
-  // Light-time correction: 0.0057755 days per AU
   const jdCorr = jd - 0.0057755 * dist
   const Tc  = (jdCorr - JD_J2000) / 36525
   const pc  = helioXY(elements, Tc)
@@ -467,7 +466,7 @@ export function getAscendant(jd: number, latitude: number, longitude: number): n
   // Ascendant = ecliptic point rising on the eastern horizon
   const y = -Math.cos(ramc_r)
   const x = Math.sin(eps) * Math.tan(lat_r) + Math.cos(eps) * Math.sin(ramc_r)
-  return normalizeDeg(deg(Math.atan2(y, x)))
+  return normalizeDeg(deg(Math.atan2(y, x)) + 180)
 }
 
 // ─── Main chart calculation ───────────────────────────────────────────────────
@@ -479,15 +478,14 @@ export function calculateChart(
   lon: number,
   tzOffset: number,
 ): ChartResult {
-  const dateArr = birthDate.split('-').map(Number)
-  const year = dateArr[0] ?? 0
-  const month = dateArr[1] ?? 1
-  const day = dateArr[2] ?? 1
-  const parts = birthTime.split(':').map(Number)
-  const h = parts[0] ?? 0
-  const m = parts[1] ?? 0
-  const s = parts[2] ?? 0
-  const jd                   = toJulianDay(year, month, day, h, m, s, tzOffset)
+  const parts = birthDate.split('-').map(Number)
+  const year  = parts[0] ?? 2000
+  const month = parts[1] ?? 1
+  const day   = parts[2] ?? 1
+  const tparts = birthTime.split(':').map(Number)
+  const hour   = tparts[0] ?? 0
+  const minute = tparts[1] ?? 0
+  const jd                   = toJulianDay(year, month, day, hour, minute, 0, tzOffset)
   const ayanamsha            = getLahiriAyanamsha(jd)
 
   // Tropical geocentric longitudes
@@ -516,7 +514,7 @@ export function calculateChart(
     positions[pl] = {
       longitude:  sid,
       sign,
-      signName:   SIGNS[sign] ?? '',
+      signName:   SIGNS[sign] ?? 'Aries',
       degInSign:  parseFloat(getDegInSign(sid).toFixed(2)),
       nakshatra:  getNakshatra(sid),
       retrograde: retro,
@@ -529,7 +527,7 @@ export function calculateChart(
   positions.Ketu = {
     longitude:  ketuSid,
     sign:       ketuSign,
-    signName:   SIGNS[ketuSign] ?? '',
+    signName:   SIGNS[ketuSign] ?? 'Aries',
     degInSign:  parseFloat(getDegInSign(ketuSid).toFixed(2)),
     nakshatra:  getNakshatra(ketuSid),
     retrograde: true,
@@ -542,7 +540,7 @@ export function calculateChart(
   const ascendant: PlanetPosition = {
     longitude:  ascSid,
     sign:       lagnaSign,
-    signName:   SIGNS[lagnaSign] ?? '',
+    signName:   SIGNS[lagnaSign] ?? 'Aries',
     degInSign:  parseFloat(getDegInSign(ascSid).toFixed(2)),
     nakshatra:  getNakshatra(ascSid),
     retrograde: false,
@@ -554,11 +552,8 @@ export function calculateChart(
   // Place planets in houses
   const planetsByHouse: PlanetInHouse[][] = Array.from({ length: 12 }, () => [])
   for (const [pl, data] of Object.entries(positions) as [PlanetName, PlanetPosition][]) {
-    if (!data) continue
     const hIdx = (data.sign - lagnaSign + 12) % 12
-    if (planetsByHouse[hIdx]) {
-      planetsByHouse[hIdx].push({ name: pl, ...data })
-    }
+    planetsByHouse[hIdx]?.push({ name: pl, ...data })
   }
 
   // ── Vimshottari Dasha ──────────────────────────────────────────────────────
@@ -569,22 +564,20 @@ export function calculateChart(
 
   const moonNakIdx       = positions.Moon.nakshatra.index
   const startDashaIdx    = moonNakIdx % 9
-  const birthLord        = DASHA_ORDER[startDashaIdx] as PlanetName
+  const birthLord = DASHA_ORDER[startDashaIdx] ?? 'Ketu'
 
-  // Fraction of nakshatra traversed at birth → fraction of dasha already elapsed
-  const NAK_SIZE         = 360 / 27
-  const moonDegInNak     = normalizeDeg(positions.Moon.longitude) % NAK_SIZE
-  const fracElapsed      = moonDegInNak / NAK_SIZE
-  const daysElapsed      = fracElapsed * DASHA_YEARS[birthLord] * 365.25
+  const NAK_SIZE     = 360 / 27
+  const moonDegInNak = normalizeDeg(positions.Moon.longitude) % NAK_SIZE
+  const fracElapsed  = moonDegInNak / NAK_SIZE
+  const daysElapsed  = fracElapsed * (DASHA_YEARS[birthLord] ?? 7) * 365.25
 
-  // Cursor = start of birth lord's dasha
-  const birthJD          = jd
-  let cursorJD           = birthJD - daysElapsed
+  const birthJD  = jd
+  let cursorJD   = birthJD - daysElapsed
 
   const dashas: Dasha[] = DASHA_ORDER.map((_, i) => {
-    const idx    = (startDashaIdx + i) % 9
-    const planet = DASHA_ORDER[idx] as PlanetName
-    const years  = DASHA_YEARS[planet]
+    const idx     = (startDashaIdx + i) % 9
+    const planet  = DASHA_ORDER[idx] ?? 'Ketu'
+    const years   = DASHA_YEARS[planet] ?? 7
     const durDays = years * 365.25
 
     const startJD = cursorJD

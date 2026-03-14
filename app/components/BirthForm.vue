@@ -85,7 +85,7 @@
           </div>
 
           <!-- Quick year jump -->
-          <div class="mt-3 pt-3 border-t border-gold-500/15 flex gap-2 flex-wrap">
+          <div class="mt-3 pt-3 border-t border-gold-500/20 flex gap-2 flex-wrap">
             <button
               v-for="y in quickYears"
               :key="y"
@@ -142,8 +142,8 @@
 
         <!-- Dropdown results -->
         <div
-          v-if="locationResults.length"
-          class="mt-1 bg-black/95 border border-gold-500/25 rounded-xl overflow-hidden shadow-2xl shadow-black/70 z-50"
+          v-if="locationResults.length || locNoResults"
+          class="mt-1 bg-black/95 border border-gold-500/20 rounded-xl overflow-hidden shadow-2xl shadow-black/70 z-50"
         >
           <button
             v-for="(res, i) in locationResults"
@@ -243,9 +243,9 @@ const MONTHS = ['January','February','March','April','May','June',
 // Initialize calendar to birth date if already set
 watch(() => props.formData.birthDate, (v) => {
   if (v) {
-    const [y, m] = v.split('-').map(Number)
-    calYear.value  = y
-    calMonth.value = m - 1
+    const parts = v.split('-').map(Number)
+    calYear.value  = parts[0] ?? today.getFullYear()
+    calMonth.value = (parts[1] ?? 1) - 1
   }
 }, { immediate: true })
 
@@ -284,8 +284,11 @@ function selectDay(day: number) {
 
 function formatDisplayDate(iso: string): string {
   if (!iso) return ''
-  const [y, m, d] = iso.split('-').map(Number)
-  return `${d} ${MONTHS[m - 1]} ${y}`
+  const parts = iso.split('-').map(Number)
+  const y = parts[0] ?? ''
+  const m = parts[1] ?? 1
+  const d = parts[2] ?? ''
+  return `${d} ${MONTHS[m - 1] ?? ''} ${y}`
 }
 
 // Quick year jump buttons
@@ -339,7 +342,7 @@ async function searchLocation() {
 
     if (data.length === 0) {
       locNoResults.value = true
-      locationResults.value = [{ display_name: '', lat: '', lon: '' }]  // trigger dropdown
+      locationResults.value = []
     } else {
       locationResults.value = data
     }

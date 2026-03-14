@@ -1,11 +1,13 @@
-// composables/useAstrology.ts
 import { ref, computed, type Ref, type ComputedRef } from 'vue'
+import { useRouter } from 'vue-router'
+import { useChartStore } from '~/stores/chartStore'
 import {
   calculateChart,
   getPlanetDignity,
   PLANET_SYMBOLS,
   PLANET_COLORS,
   type ChartResult,
+  type PlanetPosition,
   type EnrichedPlanetPosition,
   type PlanetName,
   type Dasha
@@ -32,6 +34,9 @@ export interface UseAstrologyReturn {
 }
 
 export function useAstrology(): UseAstrologyReturn {
+  const router     = useRouter()
+  const chartStore = useChartStore()
+
   const formData = ref<FormData>({
     name: '',
     birthDate: '',
@@ -42,28 +47,31 @@ export function useAstrology(): UseAstrologyReturn {
     locationName: 'New Delhi, India'
   })
 
-  const chart = ref<ChartResult | null>(null)
+  const chart   = ref<ChartResult | null>(null)
   const loading = ref<boolean>(false)
-  const error = ref<string | null>(null)
+  const error   = ref<string | null>(null)
 
   const generateChart = (): void => {
     if (!formData.value.birthDate || !formData.value.birthTime) {
       error.value = 'Please provide birth date and time.'
       return
     }
-
     loading.value = true
-    error.value = null
+    error.value   = null
 
     setTimeout(() => {
       try {
-        chart.value = calculateChart(
+        const result = calculateChart(
           formData.value.birthDate,
           formData.value.birthTime,
           formData.value.lat,
           formData.value.lon,
           formData.value.tzOffset
         )
+        chart.value = result
+        // Save to store and redirect
+        chartStore.setChart(result, { ...formData.value })
+        router.push('/birthchart')
       } catch (e) {
         error.value = 'Error calculating chart: ' + (e instanceof Error ? e.message : String(e))
       } finally {
@@ -74,14 +82,13 @@ export function useAstrology(): UseAstrologyReturn {
 
   const enrichedPositions = computed<Record<PlanetName, EnrichedPlanetPosition>>(() => {
     if (!chart.value) return {} as Record<PlanetName, EnrichedPlanetPosition>
-
     const result = {} as Record<PlanetName, EnrichedPlanetPosition>
-    for (const [planet, data] of Object.entries(chart.value.positions) as [PlanetName, typeof data][]) {
+    for (const [planet, planetData] of Object.entries(chart.value.positions) as [PlanetName, PlanetPosition][]) {
       result[planet] = {
-        ...data,
+        ...planetData,
         symbol: PLANET_SYMBOLS[planet],
-        color: PLANET_COLORS[planet],
-        dignity: getPlanetDignity(planet, data.sign)
+        color:  PLANET_COLORS[planet],
+        dignity: getPlanetDignity(planet, planetData.sign)
       }
     }
     return result
@@ -91,13 +98,5 @@ export function useAstrology(): UseAstrologyReturn {
     return chart.value?.dashas.find((d) => d.isActive)
   })
 
-  return {
-    formData,
-    chart,
-    loading,
-    error,
-    generateChart,
-    enrichedPositions,
-    currentDasha
-  }
+  return { formData, chart, loading, error, generateChart, enrichedPositions, currentDasha }
 }
