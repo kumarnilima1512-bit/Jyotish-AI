@@ -19,7 +19,6 @@ export interface SituationReading {
 }
 
 export function useTarot() {
-  // ── State ──────────────────────────────────────────────────────────────────
   const step = ref<ReadingStep>('shuffle')
   const isShuffling = ref(false)
   const shuffleComplete = ref(false)
@@ -33,31 +32,19 @@ export function useTarot() {
   const isGeneratingReading = ref(false)
   const finalReading = ref<string | null>(null)
   const readingError = ref<string | null>(null)
-
-  // For pick-10: which cards are face-up (revealed during selection)
   const revealedCards = ref<Set<number>>(new Set())
 
-  // ── Computed ───────────────────────────────────────────────────────────────
-  const currentSituation = computed(() =>
-    SITUATION_SPREADS[currentSituationIndex.value]
-  )
-
-  const allSituationsComplete = computed(() =>
-    situationReadings.value.length === SITUATION_SPREADS.length
-  )
-
+  const currentSituation = computed(() => SITUATION_SPREADS[currentSituationIndex.value])
+  const allSituationsComplete = computed(() => situationReadings.value.length === SITUATION_SPREADS.length)
   const readingProgress = computed(() => {
     const total = SITUATION_SPREADS.length
     const done = situationReadings.value.length
     return Math.round((done / total) * 100)
   })
 
-  // ── Shuffle ────────────────────────────────────────────────────────────────
   function startShuffle() {
     isShuffling.value = true
     shuffleComplete.value = false
-
-    // Fisher-Yates with multiple passes for dramatic effect
     const cards: TarotCard[] = [...TAROT_CARDS]
     setTimeout(() => {
       for (let pass = 0; pass < 7; pass++) {
@@ -79,22 +66,17 @@ export function useTarot() {
     revealedCards.value = new Set()
   }
 
-  // ── Pick 10 ────────────────────────────────────────────────────────────────
   function selectCard(index: number) {
     if (picked10.value.length >= 10) return
-    // Check not already picked
     const alreadyPicked = picked10.value.some(c => c.selectedIndex === index)
     if (alreadyPicked) return
-
     const card = shuffledDeck.value[index]
     if (!card) return
     const reversed = Math.random() < 0.3
     const drawn: DrawnCard = { ...card, reversed, selectedIndex: index }
     picked10.value.push(drawn)
     revealedCards.value.add(index)
-
     if (picked10.value.length === 10) {
-      // Auto advance after short delay
       setTimeout(() => {
         step.value = 'situations'
         currentSituationIndex.value = 0
@@ -112,20 +94,8 @@ export function useTarot() {
     return idx === -1 ? 0 : idx + 1
   }
 
-  // ── Situation 3-card draws from the picked 10 ──────────────────────────────
-  // We use the 10 picked cards across all 6 situations (3 cards each = 18 slots)
-  // We cycle/repeat from the 10 cards with fresh reversal randomization
-  function getCardForSituation(situationIdx: number, posIdx: number): DrawnCard {
-    const pool = picked10.value
-    const linearIdx = situationIdx * 3 + posIdx
-    const card = pool[linearIdx % pool.length]
-    if (!card) throw new Error('Invalid card')
-    return { ...card, reversed: Math.random() < 0.3, selectedIndex: card.selectedIndex }
-  }
-
   function selectSituationCard(cardFromPicked: DrawnCard) {
     if (currentSituationCards.value.length >= 3) return
-    // Check not already selected in this situation
     const alreadyIn = currentSituationCards.value.some(c => c.id === cardFromPicked.id)
     if (alreadyIn) return
     currentSituationCards.value.push({ ...cardFromPicked, reversed: Math.random() < 0.3, selectedIndex: cardFromPicked.selectedIndex })
@@ -145,20 +115,17 @@ export function useTarot() {
     })
     currentSituationIndex.value++
     currentSituationCards.value = []
-
     if (allSituationsComplete.value) {
       setTimeout(() => { step.value = 'gender' }, 600)
     }
   }
 
-  // ── Gender ─────────────────────────────────────────────────────────────────
   function setGender(g: 'male' | 'female') {
     gender.value = g
     step.value = 'reading'
     generateReading()
   }
 
-  // ── AI Reading Generation ──────────────────────────────────────────────────
   async function generateReading() {
     isGeneratingReading.value = true
     readingError.value = null
@@ -168,7 +135,6 @@ export function useTarot() {
       ? { sub: 'she', obj: 'her', pos: 'her', poss: 'hers', ref: 'herself' }
       : { sub: 'he', obj: 'him', pos: 'his', poss: 'his', ref: 'himself' }
 
-    // Build the prompt
     const celtic10Summary = picked10.value.map((c, i) =>
       `${i + 1}. ${c.name}${c.reversed ? ' (Reversed)' : ''}`
     ).join('\n')
@@ -180,48 +146,68 @@ export function useTarot() {
       return `**${sr.spread.title}**\n${cards}`
     }).join('\n\n')
 
-    const prompt = `You are a master Tarot reader with 30 years of experience in Rider-Waite-Smith symbolism and Jungian depth psychology. You give profound, deeply personal, and accurate readings.
+    const prompt = `You are a master Tarot reader with 30 years of experience in Rider-Waite-Smith symbolism and Jungian depth psychology. Write a complete, deeply personal tarot reading.
 
 The seeker is ${pronoun.sub === 'she' ? 'a woman' : 'a man'}. Use ${pronoun.pos} / ${pronoun.obj} pronouns throughout.
 
-The seeker shuffled the full 78-card deck and chose 10 cards. These 10 cards form ${pronoun.pos} soul signature for this reading:
+The seeker chose these 10 cards from the shuffled deck:
 ${celtic10Summary}
 
-${pronoun.sub.charAt(0).toUpperCase() + pronoun.sub.slice(1)} then chose 3 cards from these for each of 6 life areas:
+For each of the 6 life areas, the seeker chose 3 cards from those 10:
 
 ${situationSummary}
 
-Write ${pronoun.pos} complete Tarot reading. Structure it exactly as follows, with rich, specific, personalized prose for each section. Do NOT use generic language — every sentence must feel crafted specifically for this unique combination of cards.
+---
+
+CRITICAL FORMATTING RULES:
+- Do NOT use any emojis anywhere in the reading
+- Do NOT use bullet points or numbered lists
+- Each section must begin by explicitly naming the cards drawn, for example: "You drew The Moon, The Tower, and the Three of Swords for this area."
+- Then explain what each individual card reveals in its own paragraph
+- End each section with a clear conclusion paragraph that synthesizes all 3 cards into one unified message
+- Write only in flowing literary prose
+- Be specific, deep, and personal — reference the actual card names and their symbolism throughout
+- Never write generically — every sentence must feel crafted for this exact combination of cards
 
 ---
 
-## ✦ The Soul Signature
-Begin with a 2-paragraph synthesis of the 10 chosen cards as a whole. What do they reveal about ${pronoun.pos} core soul pattern, ${pronoun.pos} current life chapter, and ${pronoun.pos} deepest nature? What is the overarching story of these 10 cards together?
+Write the reading in this exact structure:
 
-## 💞 Love & Relationships
-3 rich paragraphs. What is happening in ${pronoun.pos} heart right now? What challenge is ${pronoun.sub} navigating? What does ${pronoun.pos} soul need in love? Give specific guidance rooted in the exact cards drawn.
+## Your Soul Signature
 
-## 🌟 Career & Purpose
-3 rich paragraphs. Where does ${pronoun.sub} stand professionally and in terms of ${pronoun.pos} calling? What is the obstacle? What direction is ${pronoun.pos} purpose pointing toward? Speak to ${pronoun.pos} unique gifts as revealed by these cards.
+Name all 10 chosen cards in the opening sentence. Write 2 rich paragraphs about what these 10 cards together reveal about ${pronoun.pos} soul pattern, ${pronoun.pos} current life chapter, and the overarching story they tell.
 
-## 🌑 Obstacle & Shadow
-3 rich paragraphs. Name ${pronoun.pos} specific shadow pattern with compassion and precision. What is the hidden root? What ancient wound or limiting belief lives here? And — most importantly — give ${pronoun.obj} the exact key to moving through it.
+## Love & Relationships
 
-## ✨ Spiritual Growth
-3 rich paragraphs. Where is ${pronoun.pos} spirit in its evolution right now? What profound lesson is ${pronoun.pos} soul mastering in this lifetime? What gift is being awakened? Speak to ${pronoun.obj} as a soul on a journey, not just a person in a situation.
+Open by naming the 3 cards drawn for this spread and their positions. Write one paragraph for each card explaining exactly what it reveals about ${pronoun.pos} love life and heart. End with a conclusion paragraph: what is the single clearest message these 3 cards together deliver about ${pronoun.pos} relationships right now?
 
-## 🌿 Wellbeing & Vitality
-2 rich paragraphs. What is ${pronoun.pos} body, mind, or spirit asking for? What practical steps and inner shifts would restore ${pronoun.obj} to greater wholeness?
+## Career & Purpose
 
-## 🔮 The Near Future
-3 rich paragraphs. What is ending and what is beginning? What energy will define the coming months? What is the most important thing ${pronoun.sub} must know about what is coming?
+Open by naming the 3 cards drawn. Write one paragraph per card about what it reveals for ${pronoun.pos} work, calling, and professional life. End with a conclusion paragraph: what direction is ${pronoun.pos} purpose pointing toward, and what must ${pronoun.sub} understand about ${pronoun.pos} career path?
 
-## ✦ The Oracle's Final Message
-End with one powerful, poetic paragraph — a final, personalized message from the cards to this seeker's soul. Make it unforgettable.
+## Obstacle & Shadow
+
+Open by naming the 3 cards drawn. Write one paragraph per card about what it reveals about ${pronoun.pos} blocks and shadow patterns. End with a conclusion paragraph: what is the root of ${pronoun.pos} obstacle, and what is the single key to moving through it?
+
+## Spiritual Growth
+
+Open by naming the 3 cards drawn. Write one paragraph per card about its spiritual message for ${pronoun.obj}. End with a conclusion paragraph: what soul lesson is ${pronoun.sub} mastering, and what spiritual gift is being awakened?
+
+## Wellbeing & Vitality
+
+Open by naming the 3 cards drawn. Write 2 paragraphs: what these cards reveal about ${pronoun.pos} body, mind and spirit, and what concrete steps would restore ${pronoun.obj} to greater wholeness.
+
+## The Near Future
+
+Open by naming the 3 cards drawn. Write one paragraph per card about what it says about what is ending, what is arriving, and the energy ahead. End with a conclusion paragraph: what is the single most important thing ${pronoun.sub} must know about what is coming?
+
+## The Oracle's Final Message
+
+One powerful, poetic paragraph. Address ${pronoun.obj} directly by name as "dear seeker." Reference 2 or 3 of the most significant cards from the entire reading by name and weave them into a final, unforgettable message that speaks directly to ${pronoun.pos} soul. This paragraph should feel like the oracle has truly seen ${pronoun.obj}.
 
 ---
 
-Write in flowing, literary prose. Be specific, deep, compassionate, and direct. This reading should feel like it was written by a wise and loving oracle who truly sees this person. Minimum 1200 words total.`
+Minimum 1400 words. No emojis anywhere. No bullet points. Only flowing literary prose paragraphs.`
 
     try {
       const response = await fetch('/api/tarot-reading', {
@@ -244,7 +230,6 @@ Write in flowing, literary prose. Be specific, deep, compassionate, and direct. 
     }
   }
 
-  // ── Reset ──────────────────────────────────────────────────────────────────
   function resetReading() {
     step.value = 'shuffle'
     isShuffling.value = false
@@ -262,46 +247,20 @@ Write in flowing, literary prose. Be specific, deep, compassionate, and direct. 
     revealedCards.value = new Set()
   }
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
   function getAvailableCardsForSituation(): DrawnCard[] {
-    // All 10 picked cards, excluding those already chosen in this situation
     return picked10.value.filter(
       c => !currentSituationCards.value.some(sc => sc.id === c.id)
     )
   }
 
   return {
-    // state
-    step,
-    isShuffling,
-    shuffleComplete,
-    shuffledDeck,
-    picked10,
-    situationReadings,
-    currentSituationIndex,
-    currentSituationCards,
-    currentSituation,
-    allSituationsComplete,
-    readingProgress,
-    gender,
-    isGeneratingReading,
-    finalReading,
-    readingError,
-    revealedCards,
-    // actions
-    startShuffle,
-    proceedToPick,
-    selectCard,
-    isCardPicked,
-    pickedCardNumber,
-    selectSituationCard,
-    isSituationCardSelected,
-    completeSituation,
-    setGender,
-    generateReading,
-    resetReading,
-    getAvailableCardsForSituation,
-    // constants
+    step, isShuffling, shuffleComplete, shuffledDeck, picked10,
+    situationReadings, currentSituationIndex, currentSituationCards,
+    currentSituation, allSituationsComplete, readingProgress,
+    gender, isGeneratingReading, finalReading, readingError, revealedCards,
+    startShuffle, proceedToPick, selectCard, isCardPicked, pickedCardNumber,
+    selectSituationCard, isSituationCardSelected, completeSituation,
+    setGender, generateReading, resetReading, getAvailableCardsForSituation,
     SITUATION_SPREADS,
   }
 }

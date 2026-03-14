@@ -6,33 +6,36 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Prompt is required' })
   }
 
-  const apiKey = useRuntimeConfig().openaiApiKey
+  const config = useRuntimeConfig()
+  const apiKey = config.geminiApiKey as string
   if (!apiKey) {
-    throw createError({ statusCode: 500, message: 'API key not configured' })
+    throw createError({ statusCode: 500, message: 'Gemini API key not configured' })
   }
 
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        max_tokens: 4000,
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a master Tarot reader with 30 years of experience in Rider-Waite-Smith symbolism and Jungian depth psychology. You give profound, deeply personal, and accurate readings.'
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [{ text: prompt }]
+            }
+          ],
+          generationConfig: {
+            maxOutputTokens: 4000,
+            temperature: 0.9,
           },
-          {
-            role: 'user',
-            content: prompt
+          systemInstruction: {
+            parts: [{
+              text: 'You are a master Tarot reader with 30 years of experience in Rider-Waite-Smith symbolism and Jungian depth psychology. You give profound, deeply personal, and accurate readings.'
+            }]
           }
-        ],
-      }),
-    })
+        }),
+      }
+    )
 
     if (!response.ok) {
       const err = await response.text()
@@ -40,7 +43,7 @@ export default defineEventHandler(async (event) => {
     }
 
     const data = await response.json()
-    const text = data.choices?.[0]?.message?.content || ''
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
 
     return { reading: text }
   } catch (err: any) {
