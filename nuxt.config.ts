@@ -6,7 +6,7 @@ export default defineNuxtConfig({
   //serverDir: 'app/server',
  
   runtimeConfig: {
-    anthropicApiKey:        process.env.ANTHROPIC_API_KEY         || '',
+    geminiApiKey:           process.env.GEMINI_API_KEY         || '',
     notionToken:            process.env.NOTION_TOKEN              || '',
     notionNumberMeaningsDb: process.env.NOTION_NUMBER_MEANINGS_DB || '',
     notionNumerologyDb:     process.env.NOTION_NUMEROLOGY_DB      || '',
