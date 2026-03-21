@@ -69,7 +69,11 @@ export function useAstrology(): UseAstrologyReturn {
           formData.value.tzOffset
         )
         chart.value = result
-        // Save to store and redirect
+        // Save to localStorage and store
+        if (import.meta.client) {
+          localStorage.setItem('jyotish_chart', JSON.stringify(result))
+          localStorage.setItem('jyotish_form', JSON.stringify({ ...formData.value }))
+        }
         chartStore.setChart(result, { ...formData.value })
         router.push('/birthchart')
       } catch (e) {

@@ -102,11 +102,7 @@
         <label class="block font-cinzel text-gold-500/70 text-xs tracking-widest uppercase mb-2">
           Birth Time
         </label>
-        <input
-          v-model="formData.birthTime"
-          type="time"
-          class="w-full bg-black/40 border border-gold-500/20 rounded-lg px-4 py-3 text-gray-200 font-garamond text-sm focus:outline-none focus:border-gold-400/60 transition-colors"
-        />
+        <ClockPicker v-model="formData.birthTime" />
       </div>
 
       <!-- ── Location Search ── -->

@@ -61,10 +61,9 @@
             <!-- Dignity badge -->
             <td class="py-2.5">
               <span
-                v-if="row.dignity"
                 :class="dignityClass(row.dignity)"
                 class="text-xs px-2 py-0.5 rounded-full border whitespace-nowrap"
-              >{{ row.dignity }}</span>
+              >{{ row.dignity || 'Neutral' }}</span>
             </td>
           </tr>
         </tbody>
@@ -150,8 +149,10 @@ const planetRows = computed<PlanetRow[]>(() => {
 
 function dignityClass(dignity: string): string {
   if (dignity === 'Exalted')     return 'text-gold-400 border-gold-500/40 bg-gold-500/10'
-  if (dignity === 'Debilitated') return 'text-crimson-400 border-crimson-500/40 bg-crimson-500/10'
+  if (dignity === 'Debilitated') return 'text-red-400 border-red-500/40 bg-red-500/10'
   if (dignity === 'Own Sign')    return 'text-emerald-400 border-emerald-500/40 bg-emerald-500/10'
-  return 'text-gray-500 border-gray-600/40'
+  if (dignity === 'Friendly')    return 'text-blue-400 border-blue-500/40 bg-blue-500/10'
+  if (dignity === 'Enemy')       return 'text-orange-400 border-orange-500/40 bg-orange-500/10'
+  return 'text-gray-500 border-gray-600/40 bg-gray-500/5'
 }
 </script>

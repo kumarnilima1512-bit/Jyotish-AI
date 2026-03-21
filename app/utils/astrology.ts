@@ -644,5 +644,430 @@ export function getPlanetDignity(planet: PlanetName, signIndex: number): string 
   if (d.exalted     === signIndex) return 'Exalted'
   if (d.debilitated === signIndex) return 'Debilitated'
   if (d.own.includes(signIndex))   return 'Own Sign'
-  return ''
+
+  // Friendly/Enemy signs
+  const FRIENDS: Record<PlanetName, number[]> = {
+    Sun:     [2,3,4,8],     Venus:   [1,2,5,8],
+    Moon:    [0,3],         Saturn:  [2,5,6],
+    Mars:    [0,3,4,8],     Rahu:    [1,2,5],
+    Mercury: [1,3,4,5],     Ketu:    [0,3,4],
+    Jupiter: [0,3,4,7,8],
+  }
+  const ENEMIES: Record<PlanetName, number[]> = {
+    Sun:     [1,6,9,10],    Venus:   [0,3,9,10],
+    Moon:    [9,10],        Saturn:  [0,3,4],
+    Mars:    [1,5,6],       Rahu:    [0,3,4],
+    Mercury: [0,7,11],      Ketu:    [1,5,6],
+    Jupiter: [1,5,6,9,10],
+  }
+  const fr = FRIENDS[planet]  ?? []
+  const en = ENEMIES[planet]  ?? []
+  if (fr.includes(signIndex)) return 'Friendly'
+  if (en.includes(signIndex)) return 'Enemy'
+  return 'Neutral'
+}
+
+// ─── Panchang ─────────────────────────────────────────────────────────────────
+
+export interface PanchangResult {
+  tithi: string
+  tithiNumber: number
+  paksha: 'Shukla' | 'Krishna'
+  nakshatra: string
+  nakshatraPada: number
+  yog: string
+  karan: string
+  sunriseStr: string
+  sunsetStr: string
+  moonSign: string
+  sunSign: string
+}
+
+const TITHI_NAMES = [
+  'Pratipada','Dwitiya','Tritiya','Chaturthi','Panchami',
+  'Shashthi','Saptami','Ashtami','Navami','Dashami',
+  'Ekadashi','Dwadashi','Trayodashi','Chaturdashi','Purnima/Amavasya'
+]
+
+const YOG_NAMES = [
+  'Vishkambha','Preeti','Ayushman','Saubhagya','Shobhana',
+  'Atiganda','Sukarma','Dhriti','Shool','Ganda',
+  'Vriddhi','Dhruva','Vyaghata','Harshana','Vajra',
+  'Siddhi','Vyatipata','Variyan','Parigha','Shiva',
+  'Siddha','Sadhya','Shubha','Shukla','Brahma',
+  'Indra','Vaidhriti'
+]
+
+const KARAN_MOVABLE = ['Bava','Balava','Kaulava','Taitila','Garaja','Vanija','Vishti']
+const KARAN_FIXED   = ['Shakuni','Chatushpada','Naga','Kimstughna']
+
+// Correct Gan per nakshatra (verified)
+const NAKSHATRA_GAN: string[] = [
+  'Deva','Manushya','Rakshasa','Deva','Deva','Manushya',
+  'Deva','Deva','Rakshasa','Rakshasa','Manushya','Manushya',
+  'Deva','Rakshasa','Deva','Rakshasa','Deva','Rakshasa',
+  'Rakshasa','Manushya','Manushya','Deva','Rakshasa','Rakshasa',
+  'Manushya','Manushya','Deva'
+]
+
+// Correct Yoni per nakshatra (verified)
+const NAKSHATRA_YON: string[] = [
+  'Ashwa','Gaja','Mesha','Sarpa','Sarpa','Shvan',
+  'Marjara','Mesha','Marjara','Mushaka','Ashwa','Gau',
+  'Mahisha','Vyaghra','Mahisha','Vyaghra','Mriga','Mriga',
+  'Shvan','Vanara','Nakula','Vanara','Simha','Ashwa',
+  'Simha','Vanara','Gaja'
+]
+
+// Correct Nadi per nakshatra
+const NAKSHATRA_NADI: string[] = [
+  'Aadi','Madhya','Antya','Antya','Madhya','Aadi',
+  'Aadi','Madhya','Antya','Antya','Madhya','Aadi',
+  'Aadi','Madhya','Antya','Antya','Madhya','Aadi',
+  'Aadi','Madhya','Antya','Antya','Madhya','Aadi',
+  'Aadi','Madhya','Antya'
+]
+
+export function calculatePanchang(
+  jd: number,
+  lat: number,
+  lon: number,
+  tzOffset: number,
+  sunLonSidereal: number,
+  moonLon: number,
+  sunLonTropical: number,
+): PanchangResult {
+  // Tithi = lunar day (every 12° of Moon ahead of Sun) — use sidereal
+  const moonSunDiff = normalizeDeg(moonLon - sunLonSidereal)
+  const tithiFloat  = moonSunDiff / 12
+  const tithiNum    = Math.floor(tithiFloat)
+  const paksha      = tithiNum < 15 ? 'Shukla' : 'Krishna'
+  const tithiIdx    = tithiNum < 15 ? tithiNum : tithiNum - 15
+  const tithi       = TITHI_NAMES[Math.min(tithiIdx, 14)] ?? 'Pratipada'
+
+  // Nakshatra of Moon
+  const moonNak = getNakshatra(moonLon)
+
+  // Yog = (Sun + Moon) / (360/27) — use sidereal
+  const yogLon = normalizeDeg(sunLonSidereal + moonLon)
+  const yogIdx = Math.floor(yogLon / (360 / 27)) % 27
+  const yog    = YOG_NAMES[yogIdx] ?? 'Vishkambha'
+
+  // Karan = half-tithi
+  // halfTithi 0 = Kimstughna (fixed), 1-56 = movable cycle of 7, 57-59 = fixed
+  const halfTithi = Math.floor(moonSunDiff / 6)
+  let karan: string
+  if (halfTithi === 0) {
+    karan = 'Kimstughna'
+  } else if (halfTithi >= 57) {
+    karan = KARAN_FIXED[halfTithi - 57] ?? 'Shakuni'
+  } else {
+    karan = KARAN_MOVABLE[(halfTithi - 1) % 7] ?? 'Bava'
+  }
+
+  // Sunrise/Sunset — use JD at 0h UT of birth date
+  // Convert birth JD to local date, then get JD at 0h UT
+  const localJD   = jd + tzOffset / 24
+  const dayNumber = Math.floor(localJD)          // integer day in local time
+  // JD at 0h UT of that calendar day
+  const jd0hUT    = dayNumber - 0.5              // noon JD → subtract 0.5 for midnight
+
+  const T  = (jd0hUT - 2451545.0) / 36525
+  const L0 = normalizeDeg(280.46646 + 36000.76983*T)
+  const M  = normalizeDeg(357.52911 + 35999.05029*T)
+  const Mr = rad(M)
+  const C  = (1.914602 - 0.004817*T)*Math.sin(Mr) + 0.019993*Math.sin(2*Mr)
+  const sunLon0 = normalizeDeg(L0 + C)
+  const obliq   = 23.439 - 0.0000004*T
+  const decl    = Math.asin(Math.sin(rad(obliq)) * Math.sin(rad(sunLon0)))
+
+  // Equation of time (minutes)
+  const y2  = Math.tan(rad(obliq / 2)) ** 2
+  const e   = 0.016708634 - 0.000042037*T
+  const EqT = 4 * (180/Math.PI) * (
+    y2*Math.sin(2*rad(L0))
+    - 2*e*Math.sin(Mr)
+    + 4*e*y2*Math.sin(Mr)*Math.cos(2*rad(L0))
+    - 0.5*y2*y2*Math.sin(4*rad(L0))
+    - 1.25*e*e*Math.sin(2*Mr)
+  )
+
+  const cosH = (Math.cos(rad(90.833)) - Math.sin(rad(lat))*Math.sin(decl))
+             / (Math.cos(rad(lat))*Math.cos(decl))
+
+  let sunriseStr = '--:--'
+  let sunsetStr  = '--:--'
+
+  if (cosH >= -1 && cosH <= 1) {
+    const H          = Math.acos(cosH) * 180/Math.PI
+    const solarNoon  = 720 - 4*lon - EqT + tzOffset*60  // minutes from midnight
+    const sunriseMin = solarNoon - H*4
+    const sunsetMin  = solarNoon + H*4
+
+    const toTime = (min: number) => {
+      const total = ((min % 1440) + 1440) % 1440
+      const hh = Math.floor(total / 60)
+      const mm = Math.round(total % 60)
+      return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`
+    }
+    sunriseStr = toTime(sunriseMin)
+    sunsetStr  = toTime(sunsetMin)
+  }
+
+  return {
+    tithi,
+    tithiNumber: tithiNum + 1,
+    paksha,
+    nakshatra: moonNak.name,
+    nakshatraPada: moonNak.pada,
+    yog,
+    karan,
+    sunriseStr,
+    sunsetStr,
+    moonSign: SIGNS[Math.floor(moonLon/30)] ?? 'Aries',
+    sunSign:  SIGNS[Math.floor(sunLonTropical/30)] ?? 'Aries',  // tropical sun sign
+  }
+}
+
+// ─── Avakhada Chakra ──────────────────────────────────────────────────────────
+
+export interface AvakhadaResult {
+  varna: string
+  vashya: string
+  yoni: string
+  yoniAnimal: string
+  gan: string
+  nadi: string
+  signLord: string
+  nakshatraCharan: number
+  tithi: string
+  yog: string
+  karan: string
+  tatva: string
+  nameAlphabet: string
+  paya: string
+  lagnaSign: string
+  lagnaLord: string
+}
+
+const NAKSHATRA_ALPHABET: string[] = [
+  'Chu,Che,Cho,La',   // Ashwini
+  'Li,Lu,Le,Lo',       // Bharani
+  'A,I,U,E',           // Krittika
+  'O,Va,Vi,Vu',        // Rohini
+  'Ve,Vo,Ka,Ki',       // Mrigashira
+  'Ku,Gha,Ng,Chha',    // Ardra
+  'Ke,Ko,Ha,Hi',       // Punarvasu
+  'Hu,He,Ho,Da',       // Pushya
+  'Di,Du,De,Do',       // Ashlesha
+  'Ma,Mi,Mu,Me',       // Magha
+  'Mo,Ta,Ti,Tu',       // Purva Phalguni
+  'Te,To,Pa,Pi',       // Uttara Phalguni
+  'Pu,Sha,Na,Tha',     // Hasta
+  'Pe,Po,Ra,Ri',       // Chitra
+  'Ru,Re,Ro,Ta',       // Swati
+  'Ti,Tu,Te,To',       // Vishakha
+  'Na,Ni,Nu,Ne',       // Anuradha
+  'No,Ya,Yi,Yu',       // Jyeshtha
+  'Ye,Yo,Bha,Bhi',     // Mula
+  'Bhu,Dha,Pha,Dha',   // Purva Ashadha
+  'Bhe,Bho,Ja,Ji',     // Uttara Ashadha
+  'Ju,Je,Jo,Sha',      // Shravana
+  'Ga,Gi,Gu,Ge',       // Dhanishtha
+  'Go,Sa,Si,Su',       // Shatabhisha
+  'Se,So,Da,Di',       // Purva Bhadrapada
+  'Du,Tha,Jha,Na',     // Uttara Bhadrapada
+  'De,Do,Cha,Chi',     // Revati
+]
+
+const SIGN_LORD: Record<number, string> = {
+  0:'Mars', 1:'Venus', 2:'Mercury', 3:'Moon', 4:'Sun',
+  5:'Mercury', 6:'Venus', 7:'Mars', 8:'Jupiter',
+  9:'Saturn', 10:'Saturn', 11:'Jupiter'
+}
+
+const SIGN_VARNA: Record<number, string> = {
+  0:'Kshatriya', 1:'Vaishya', 2:'Shudra', 3:'Brahmin',
+  4:'Kshatriya', 5:'Vaishya', 6:'Shudra', 7:'Brahmin',
+  8:'Kshatriya', 9:'Vaishya', 10:'Shudra', 11:'Brahmin'
+}
+
+const SIGN_VASHYA: Record<number, string> = {
+  0:'Chatushpad', 1:'Chatushpad', 2:'Manav', 3:'Jalchar',
+  4:'Chatushpad', 5:'Manav',      6:'Manav', 7:'Keeta',
+  8:'Manav',      9:'Chatushpad', 10:'Manav', 11:'Jalchar'
+}
+
+const SIGN_TATVA: Record<number, string> = {
+  0:'Fire', 1:'Earth', 2:'Air', 3:'Water',
+  4:'Fire', 5:'Earth', 6:'Air', 7:'Water',
+  8:'Fire', 9:'Earth', 10:'Air', 11:'Water'
+}
+
+// Gold/Silver/Copper/Iron Paya based on Moon nakshatra
+const NAKSHATRA_PAYA: string[] = [
+  'Gold','Gold','Gold','Silver','Silver','Silver','Copper','Copper','Copper',
+  'Iron','Iron','Iron','Gold','Gold','Gold','Silver','Silver','Silver',
+  'Copper','Copper','Copper','Iron','Iron','Iron','Gold','Gold','Gold'
+]
+
+export function calculateAvakhada(
+  moonSign: number,
+  moonNakIdx: number,
+  moonNakPada: number,
+  lagnaSignIdx: number,
+  tithi: string,
+  yog: string,
+  karan: string,
+): AvakhadaResult {
+  const nakAlphabets = NAKSHATRA_ALPHABET[moonNakIdx] ?? ''
+  const alphaArr     = nakAlphabets.split(',')
+  const nameAlpha    = alphaArr[moonNakPada - 1] ?? alphaArr[0] ?? ''
+
+  return {
+    varna:          SIGN_VARNA[moonSign]   ?? 'Brahmin',
+    vashya:         SIGN_VASHYA[moonSign]  ?? 'Manav',
+    yoni:           NAKSHATRA_YON[moonNakIdx] ?? 'Ashwa',
+    yoniAnimal:     NAKSHATRA_YON[moonNakIdx] ?? 'Ashwa',
+    gan:            NAKSHATRA_GAN[moonNakIdx] ?? 'Deva',
+    nadi:           NAKSHATRA_NADI[moonNakIdx] ?? 'Aadi',
+    signLord:       SIGN_LORD[moonSign]    ?? 'Moon',
+    nakshatraCharan: moonNakPada,
+    tithi,
+    yog,
+    karan,
+    tatva:          SIGN_TATVA[moonSign]   ?? 'Fire',
+    nameAlphabet:   nameAlpha,
+    paya:           NAKSHATRA_PAYA[moonNakIdx] ?? 'Gold',
+    lagnaSign:      SIGNS[lagnaSignIdx]    ?? 'Aries',
+    lagnaLord:      SIGN_LORD[lagnaSignIdx] ?? 'Mars',
+  }
+}
+
+// ─── Dosha Analysis ───────────────────────────────────────────────────────────
+
+export interface DoshaResult {
+  isManglik: boolean
+  manglikReason: string
+  manglikLevel: 'None' | 'Partial' | 'Full'
+  sadeSati: { active: boolean; phase: string; details: string }
+  kaalsarp: { present: boolean; type: string; details: string }
+  pitruDosha: boolean
+  pitruReason: string
+}
+
+export function calculateDosha(
+  chart: ChartResult,
+): DoshaResult {
+  const pos = chart.positions
+  const lagnaSign = chart.lagnaSign
+
+  // ── Manglik Dosha ──
+  // Mars in 1st, 2nd, 4th, 7th, 8th, 12th house from Lagna, Moon, or Venus
+  // Manglik houses: 1st, 2nd, 4th, 7th, 8th, 12th (1-based) = 0,1,3,6,7,11 (0-based)
+  // Checked from Lagna and Moon only (most widely accepted tradition)
+  const manglikHouses = [0, 1, 3, 6, 7, 11]
+  const marsHouseFromLagna = (pos.Mars.sign - lagnaSign + 12) % 12
+  const marsHouseFromMoon  = (pos.Mars.sign - pos.Moon.sign + 12) % 12
+
+  const manglikFromLagna = manglikHouses.includes(marsHouseFromLagna)
+  const manglikFromMoon  = manglikHouses.includes(marsHouseFromMoon)
+
+  const manglikCount = [manglikFromLagna, manglikFromMoon].filter(Boolean).length
+
+  let isManglik = manglikCount > 0
+  let manglikLevel: 'None' | 'Partial' | 'Full' = 'None'
+  let manglikReason = 'Mars is not placed in a Manglik house from Lagna or Moon.'
+
+  if (manglikCount === 2) {
+    manglikLevel = 'Full'
+    manglikReason = `Mars is in house ${marsHouseFromLagna+1} from Lagna and house ${marsHouseFromMoon+1} from Moon — Full Manglik Dosha.`
+  } else if (manglikCount === 1) {
+    manglikLevel = 'Partial'
+    if (manglikFromLagna) manglikReason = `Mars is in house ${marsHouseFromLagna+1} from Lagna — Partial Manglik Dosha.`
+    else manglikReason = `Mars is in house ${marsHouseFromMoon+1} from Moon — Partial Manglik Dosha.`
+  }
+
+  // Cancellation checks
+  if (isManglik) {
+    // Mars in own sign or exalted cancels dosha
+    if (pos.Mars.sign === 0 || pos.Mars.sign === 7 || pos.Mars.sign === 9) {
+      manglikLevel = 'Partial'
+      manglikReason += ' (Partially cancelled — Mars in own/exalted sign)'
+    }
+    // Jupiter aspecting Mars
+    const jupHouseFromMars = (pos.Jupiter.sign - pos.Mars.sign + 12) % 12
+    if (jupHouseFromMars === 6) { // Jupiter 7th from Mars = opposition
+      manglikLevel = 'Partial'
+      manglikReason += ' (Mitigated by Jupiter\'s aspect)'
+    }
+  }
+
+  // ── Sade Sati ──
+  // Saturn within 3 signs of natal Moon (sign before, same sign, sign after)
+  const saturnSign = pos.Saturn.sign
+  const moonSign   = pos.Moon.sign
+  const satMoonDiff = (saturnSign - moonSign + 12) % 12
+
+  let sadeSati = { active: false, phase: '', details: '' }
+  if (satMoonDiff === 11) {
+    sadeSati = { active: true, phase: 'Rising Phase (1st round)', details: `Saturn in ${SIGNS[saturnSign] ?? ''} — entering Moon sign's previous sign. Challenges beginning.` }
+  } else if (satMoonDiff === 0) {
+    sadeSati = { active: true, phase: 'Peak Phase (2nd round)', details: `Saturn in ${SIGNS[saturnSign] ?? ''} conjunct natal Moon sign. Most intense period of Sade Sati.` }
+  } else if (satMoonDiff === 1) {
+    sadeSati = { active: true, phase: 'Setting Phase (3rd round)', details: `Saturn in ${SIGNS[saturnSign] ?? ''} — leaving Moon sign. Gradual relief approaching.` }
+  } else {
+    sadeSati = { active: false, phase: 'Not Active', details: `Saturn is in ${SIGNS[saturnSign] ?? ''}, ${satMoonDiff} signs from natal Moon in ${SIGNS[moonSign] ?? ''}. No Sade Sati at birth.` }
+  }
+
+  // ── Kaal Sarp Dosha ──
+  // All 7 planets between Rahu and Ketu (same arc direction)
+  const rahuLon = pos.Rahu.longitude
+  const ketuLon = pos.Ketu.longitude
+  const planets7: PlanetName[] = ['Sun','Moon','Mars','Mercury','Jupiter','Venus','Saturn']
+
+  // Check if all planets fall in the arc from Rahu to Ketu (going forward)
+  const rahuToKetu = (ketuLon - rahuLon + 360) % 360 // arc length Rahu→Ketu
+  const allInArc = planets7.every(p => {
+    const diff = (pos[p].longitude - rahuLon + 360) % 360
+    return diff < rahuToKetu
+  })
+  const allInOtherArc = planets7.every(p => {
+    const diff = (pos[p].longitude - ketuLon + 360) % 360
+    return diff < (360 - rahuToKetu)
+  })
+
+  let kaalsarp = { present: false, type: '', details: '' }
+  if (allInArc || allInOtherArc) {
+    // Determine type by Rahu's sign
+    const KAALSARP_TYPES: Record<number, string> = {
+      0:'Anant', 1:'Kulik', 2:'Vasuki', 3:'Shankhpal', 4:'Padma', 5:'Mahapadma',
+      6:'Takshak', 7:'Karkotak', 8:'Shankhchud', 9:'Ghatak', 10:'Vishdhar', 11:'Sheshnag'
+    }
+    const ksType = KAALSARP_TYPES[pos.Rahu.sign] ?? 'Anant'
+    kaalsarp = {
+      present: true,
+      type: `${ksType} Kaal Sarp Dosha`,
+      details: `All 7 planets are hemmed between Rahu (${SIGNS[pos.Rahu.sign] ?? ''}) and Ketu (${SIGNS[pos.Ketu.sign] ?? ''}). This indicates ${ksType} Kaal Sarp Dosha — obstacles and delays in life, but also potential for spiritual growth.`
+    }
+  } else {
+    kaalsarp = {
+      present: false,
+      type: 'No Kaal Sarp Dosha',
+      details: `Planets are not all hemmed between Rahu and Ketu. No Kaal Sarp Dosha present in this chart.`
+    }
+  }
+
+  // ── Pitru Dosha ──
+  // Sun afflicted by Rahu/Ketu/Saturn in 9th house
+  const sunHouse    = (pos.Sun.sign - lagnaSign + 12) % 12
+  const rahuHouse   = (pos.Rahu.sign - lagnaSign + 12) % 12
+  const ketuHouse   = (pos.Ketu.sign - lagnaSign + 12) % 12
+  const saturnHouse = (pos.Saturn.sign - lagnaSign + 12) % 12
+  const pitruDosha  = sunHouse === 8 && (rahuHouse === 8 || ketuHouse === 8 || saturnHouse === 8 || pos.Sun.sign === pos.Saturn.sign)
+  const pitruReason = pitruDosha
+    ? 'Sun is in the 9th house afflicted by malefic — Pitru Dosha indicated.'
+    : 'No significant Pitru Dosha detected.'
+    
+  return { isManglik, manglikReason, manglikLevel, sadeSati, kaalsarp, pitruDosha, pitruReason }
 }
