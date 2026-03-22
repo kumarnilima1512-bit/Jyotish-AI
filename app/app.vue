@@ -11,5 +11,6 @@ export default {
 <template>
   <div>
     <NuxtPage />
+    <Appbackground /> <!-- Add the background component here -->
   </div>
 </template>

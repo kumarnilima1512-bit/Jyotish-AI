@@ -9,7 +9,7 @@
       <!-- Name -->
       <div>
         <label class="block font-cinzel text-gold-500/70 text-xs tracking-widest uppercase mb-2">
-          Native's Name
+          Your Name
         </label>
         <input
           v-model="formData.name"
