@@ -1,0 +1,21 @@
+services:
+
+  jyotish_ai:
+
+    build:
+
+      context: .
+
+      dockerfile: Dockerfile
+
+    container_name: jyotish_ai_app
+
+    env_file:
+
+      - .env
+
+    ports:
+
+      - '3000:3000'
+      
+    restart: on-failure:3
