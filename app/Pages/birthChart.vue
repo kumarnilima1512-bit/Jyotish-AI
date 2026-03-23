@@ -1,10 +1,5 @@
 <template>
-  <div class="min-h-screen bg-midnight-950 text-gray-200 relative overflow-x-hidden">
-
-    <div class="fixed inset-0 pointer-events-none z-0">
-      <div v-for="star in stars" :key="star.id" class="absolute rounded-full bg-white"
-        :style="{ left: star.x+'%', top: star.y+'%', width: star.size+'px', height: star.size+'px', opacity: star.opacity, animation: `twinkle ${star.duration}s ease-in-out infinite ${star.delay}s` }" />
-    </div>
+  <div class="relative z-10">
 
     <header class="relative z-10 border-b border-gold-500/15 py-5 px-6">
       <div class="max-w-7xl mx-auto flex items-center justify-between">
@@ -110,6 +105,16 @@
         <!-- Dosha -->
         <DoshaAnalysis v-if="dosha" :dosha="dosha" class="mt-6" />
 
+        <!-- AI Astrologer Chat -->
+        <div v-if="chartStore.astrologer" class="mt-6">
+          <h3 class="font-cinzel text-gold-400/60 text-xs tracking-[0.3em] uppercase mb-4">✦ Consult Your Astrologer</h3>
+          <AstrologerChat
+            :astrologer="chartStore.astrologer"
+            :chart="chart"
+            :form-data="chartStore.formData"
+          />
+        </div>
+
         <!-- New Chart -->
         <div class="text-center mt-10">
           <NuxtLink to="/" class="px-8 py-3 rounded-xl border border-gold-500/25 font-cinzel text-sm text-gold-400/60 tracking-widest uppercase hover:border-gold-400/40 hover:text-gold-300 hover:bg-gold-500/5 transition-all">↺ New Chart</NuxtLink>
@@ -137,6 +142,21 @@ import { calculateNavamsa, calculateChalit } from '~/utils/divisional'
 
 const chartStore = useChartStore()
 const chart      = computed(() => chartStore.chart)
+
+// Load from localStorage if store is empty (e.g. after page refresh)
+onMounted(() => {
+  if (!chartStore.chart && import.meta.client) {
+    try {
+      const raw  = localStorage.getItem('jyotish_chart')
+      const form = localStorage.getItem('jyotish_form')
+      if (raw && form) {
+        chartStore.setChart(JSON.parse(raw), JSON.parse(form))
+      }
+    } catch (e) {
+      console.error('Failed to load chart from localStorage', e)
+    }
+  }
+})
 
 const activeTab  = ref('lagna')
 const chartTabs  = [
@@ -189,12 +209,6 @@ onMounted(() => {
   const upd = () => { chartSize.value = window.innerWidth < 640 ? 300 : window.innerWidth < 1024 ? 360 : 420 }
   upd(); window.addEventListener('resize', upd)
 })
-
-const stars = Array.from({ length: 80 }, (_, i) => ({
-  id: i, x: Math.random()*100, y: Math.random()*100,
-  size: Math.random()*2+0.5, opacity: Math.random()*0.45+0.08,
-  duration: Math.random()*4+2, delay: Math.random()*5,
-}))
 </script>
 
 <style>

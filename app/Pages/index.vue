@@ -1,13 +1,6 @@
 <template>
-  <div class="min-h-screen bg-midnight-950 text-gray-200 relative overflow-x-hidden">
+  <div class="relative z-10 min-h-screen text-gray-200">
 
-    <!-- Starfield -->
-    <div class="fixed inset-0 pointer-events-none z-0">
-      <div v-for="star in stars" :key="star.id" class="absolute rounded-full bg-white"
-        :style="{ left: star.x+'%', top: star.y+'%', width: star.size+'px', height: star.size+'px', opacity: star.opacity, animation: `twinkle ${star.duration}s ease-in-out infinite ${star.delay}s` }" />
-    </div>
-
-    <!-- Header -->
     <header class="relative z-10 border-b border-gold-500/15 py-6 px-6">
       <div class="max-w-7xl mx-auto flex items-center justify-between">
         <div class="flex items-center gap-3">
@@ -32,24 +25,35 @@
 
         <!-- Left: Form -->
         <div class="lg:col-span-1">
-          <BirthForm
-            :form-data="formData"
-            :loading="loading"
-            :error="error"
-            @generate="generateChart"
-          />
+          <BirthForm :form-data="formData" :loading="loading" :error="error" @generate="generateChart"/>
         </div>
 
-        <!-- Right: Feature buttons + Welcome -->
+        <!-- Right: Welcome + Feature buttons -->
         <div class="lg:col-span-2 space-y-4">
 
-          <!-- Welcome message -->
+          <!-- Welcome -->
           <div class="text-center py-10 px-6 bg-gold-500/3 border border-gold-500/10 rounded-2xl">
-            <div class="text-6xl text-gold-400/15 mb-5 font-cinzel">☽ ☉ ☊</div>
+            <div class="font-cinzel text-5xl text-gold-400/15 mb-5">☽ ☉ ☊</div>
             <h2 class="font-cinzel text-gold-400/50 text-2xl tracking-[0.3em] uppercase mb-3">Vedic Birth Chart</h2>
-            <p class="font-garamond text-gray-600 max-w-md mx-auto leading-relaxed">
+            <p class="font-garamond text-gray-600 max-w-md mx-auto leading-relaxed mb-6">
               Enter your birth details on the left and click <span class="text-gold-500/70">Cast the Chart</span> to generate your complete Vedic horoscope in North Indian style.
             </p>
+            <!-- AI Astrologer CTA -->
+            <NuxtLink to="/astrologer"
+              class="inline-flex items-center gap-3 px-6 py-3 rounded-xl border border-gold-500/25 bg-gold-500/8 hover:border-gold-500/50 hover:bg-gold-500/15 transition-all duration-300 group">
+              <div class="flex -space-x-2">
+                <!-- Male avatar mini -->
+                <div class="w-7 h-7 rounded-full border border-amber-400/40 bg-amber-500/10 flex items-center justify-center">
+                  <svg width="16" height="16" viewBox="0 0 80 80" fill="none"><circle cx="40" cy="30" r="14" fill="#fbbf24" fill-opacity="0.9"/><path d="M26 27 C26 19 33 13 40 13 C47 13 54 19 54 27" fill="#b45309" fill-opacity="0.9"/><ellipse cx="40" cy="25" rx="1.8" ry="2.5" fill="#ef4444" fill-opacity="0.9"/></svg>
+                </div>
+                <!-- Female avatar mini -->
+                <div class="w-7 h-7 rounded-full border border-rose-400/40 bg-rose-500/10 flex items-center justify-center">
+                  <svg width="16" height="16" viewBox="0 0 80 80" fill="none"><circle cx="40" cy="30" r="14" fill="#fde68a" fill-opacity="0.9"/><ellipse cx="40" cy="12" rx="5" ry="4" fill="#1c1917" fill-opacity="0.9"/><circle cx="40" cy="24" r="2.2" fill="#ef4444" fill-opacity="0.95"/></svg>
+                </div>
+              </div>
+              <span class="font-cinzel text-xs text-gold-400/70 tracking-wider group-hover:text-gold-300 transition-colors">Consult AI Astrologer</span>
+              <svg class="w-3 h-3 text-gold-500/40 group-hover:text-gold-400/70 transition-colors" viewBox="0 0 10 10" fill="none"><path d="M3 1L7 5L3 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </NuxtLink>
           </div>
 
           <!-- Feature Navigation -->
@@ -69,9 +73,7 @@
                 <div class="font-cinzel text-xs tracking-wider text-gray-300 group-hover:text-pink-300 transition-colors">Kundli Milan</div>
                 <div class="font-garamond text-xs text-gray-600">Compatibility · Gun Milan</div>
               </div>
-              <svg class="shrink-0 w-3.5 h-3.5 text-gray-600 group-hover:text-pink-500/50 transition-colors" viewBox="0 0 10 10" fill="none">
-                <path d="M3 1L7 5L3 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-              </svg>
+              <svg class="shrink-0 w-3.5 h-3.5 text-gray-600 group-hover:text-pink-500/50" viewBox="0 0 10 10" fill="none"><path d="M3 1L7 5L3 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
             </NuxtLink>
 
             <!-- Daily Horoscope -->
@@ -91,9 +93,7 @@
                 <div class="font-cinzel text-xs tracking-wider text-gray-300 group-hover:text-amber-300 transition-colors">Daily Horoscope</div>
                 <div class="font-garamond text-xs text-gray-600">{{ todayStr }} · Planetary transits</div>
               </div>
-              <svg class="shrink-0 w-3.5 h-3.5 text-gray-600 group-hover:text-amber-500/50 transition-colors" viewBox="0 0 10 10" fill="none">
-                <path d="M3 1L7 5L3 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-              </svg>
+              <svg class="shrink-0 w-3.5 h-3.5 text-gray-600 group-hover:text-amber-500/50" viewBox="0 0 10 10" fill="none"><path d="M3 1L7 5L3 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
             </NuxtLink>
 
             <!-- Panchang -->
@@ -108,9 +108,7 @@
                 <div class="font-cinzel text-xs tracking-wider text-gray-300 group-hover:text-orange-300 transition-colors">Panchang</div>
                 <div class="font-garamond text-xs text-gray-600">Tithi · Nakshatra · Yoga · Karana</div>
               </div>
-              <svg class="shrink-0 w-3.5 h-3.5 text-gray-600 group-hover:text-orange-500/50 transition-colors" viewBox="0 0 10 10" fill="none">
-                <path d="M3 1L7 5L3 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-              </svg>
+              <svg class="shrink-0 w-3.5 h-3.5 text-gray-600 group-hover:text-orange-500/50" viewBox="0 0 10 10" fill="none"><path d="M3 1L7 5L3 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
             </NuxtLink>
 
             <!-- Numerology -->
@@ -126,9 +124,7 @@
                 <div class="font-cinzel text-xs tracking-wider text-gray-300 group-hover:text-violet-300 transition-colors">Numerology</div>
                 <div class="font-garamond text-xs text-gray-600">Life Path · Destiny · Soul Urge</div>
               </div>
-              <svg class="shrink-0 w-3.5 h-3.5 text-gray-600 group-hover:text-violet-500/50 transition-colors" viewBox="0 0 10 10" fill="none">
-                <path d="M3 1L7 5L3 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-              </svg>
+              <svg class="shrink-0 w-3.5 h-3.5 text-gray-600 group-hover:text-violet-500/50" viewBox="0 0 10 10" fill="none"><path d="M3 1L7 5L3 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
             </NuxtLink>
 
             <!-- Tarot -->
@@ -144,9 +140,7 @@
                 <div class="font-cinzel text-xs tracking-wider text-gray-300 group-hover:text-rose-300 transition-colors">Tarot Reading</div>
                 <div class="font-garamond text-xs text-gray-600">78-Card Rider-Waite · Full Celtic Cross</div>
               </div>
-              <svg class="shrink-0 w-3.5 h-3.5 text-gray-600 group-hover:text-rose-500/50 transition-colors" viewBox="0 0 10 10" fill="none">
-                <path d="M3 1L7 5L3 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-              </svg>
+              <svg class="shrink-0 w-3.5 h-3.5 text-gray-600 group-hover:text-rose-500/50" viewBox="0 0 10 10" fill="none"><path d="M3 1L7 5L3 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
             </NuxtLink>
 
           </div>
@@ -166,20 +160,7 @@ import { useAstrology } from '~/composables/useAstrology'
 
 const { formData, loading, error, generateChart } = useAstrology()
 
-const stars = Array.from({ length: 80 }, (_, i) => ({
-  id: i, x: Math.random()*100, y: Math.random()*100,
-  size: Math.random()*2+0.5, opacity: Math.random()*0.45+0.08,
-  duration: Math.random()*4+2, delay: Math.random()*5,
-}))
-
 const todayStr = computed(() =>
-  new Date().toLocaleDateString('en-IN', { day:'numeric', month:'long', year:'numeric' })
+  new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
 )
 </script>
-
-<style>
-@keyframes twinkle {
-  0%, 100% { opacity: 0.15; }
-  50%       { opacity: 0.75; }
-}
-</style>
