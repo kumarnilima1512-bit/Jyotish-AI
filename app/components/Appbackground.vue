@@ -7,9 +7,9 @@
       muted
       playsinline
       class="absolute inset-0 w-full h-full object-cover"
-      style="opacity: 0.55; transform: scale(1.3); transform-origin: center center;"
+      style="opacity: 1.55; transform: scale(1.0); transform-origin: center center;"
     >
-      <source src="/videos/bg.mp4" type="video/mp4"/>
+      <source src="/videos/astrobg.mp4" type="video/mp4"/>
     </video>
 
     <!-- Dark overlay so text stays readable -->
