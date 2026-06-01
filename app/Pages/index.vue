@@ -39,21 +39,49 @@
               Enter your birth details on the left and click <span class="text-gold-500/70">Cast the Chart</span> to generate your complete Vedic horoscope in North Indian style.
             </p>
             <!-- AI Astrologer CTA -->
-            <NuxtLink to="/astrologer"
-              class="inline-flex items-center gap-3 px-6 py-3 rounded-xl border border-gold-500/25 bg-gold-500/8 hover:border-gold-500/50 hover:bg-gold-500/15 transition-all duration-300 group">
-              <div class="flex -space-x-2">
-                <!-- Male avatar mini -->
-                <div class="w-7 h-7 rounded-full border border-amber-400/40 bg-amber-500/10 flex items-center justify-center">
-                  <svg width="16" height="16" viewBox="0 0 80 80" fill="none"><circle cx="40" cy="30" r="14" fill="#fbbf24" fill-opacity="0.9"/><path d="M26 27 C26 19 33 13 40 13 C47 13 54 19 54 27" fill="#b45309" fill-opacity="0.9"/><ellipse cx="40" cy="25" rx="1.8" ry="2.5" fill="#ef4444" fill-opacity="0.9"/></svg>
-                </div>
-                <!-- Female avatar mini -->
-                <div class="w-7 h-7 rounded-full border border-rose-400/40 bg-rose-500/10 flex items-center justify-center">
-                  <svg width="16" height="16" viewBox="0 0 80 80" fill="none"><circle cx="40" cy="30" r="14" fill="#fde68a" fill-opacity="0.9"/><ellipse cx="40" cy="12" rx="5" ry="4" fill="#1c1917" fill-opacity="0.9"/><circle cx="40" cy="24" r="2.2" fill="#ef4444" fill-opacity="0.95"/></svg>
-                </div>
-              </div>
-              <span class="font-cinzel text-xs text-gold-400/70 tracking-wider group-hover:text-gold-300 transition-colors">Consult AI Astrologer</span>
-              <svg class="w-3 h-3 text-gold-500/40 group-hover:text-gold-400/70 transition-colors" viewBox="0 0 10 10" fill="none"><path d="M3 1L7 5L3 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-            </NuxtLink>
+            <NuxtLink
+              to="/astrologer"
+              class="inline-flex items-center gap-4 px-6 py-3 rounded-xl border border-gold-500/25 bg-gold-500/8 hover:border-gold-500/50 hover:bg-gold-500/15 transition-all duration-300 group"
+>
+                  <div class="flex -space-x-3">
+                  <img
+                      src="/images/astrologers/pandit-arjun.png"
+                      alt="Male Astrologer"
+                      class="w-10 h-10 rounded-full object-cover border-2 border-amber-400/50 shadow-lg"
+                  />
+
+                  <img
+                      src="/images/astrologers/devi-saraswati.png"
+                      alt="Female Astrologer"
+                      class="w-10 h-10 rounded-full object-cover border-2 border-rose-400/50 shadow-lg"
+                  />
+  </div>
+
+  <div class="flex flex-col items-start">
+    <span
+      class="font-cinzel text-xs md:text-sm text-gold-400/80 tracking-[0.18em] uppercase group-hover:text-gold-300 transition-colors"
+    >
+      Consult AI Astrologers
+    </span>
+
+    <span class="font-garamond text-xs text-gray-500">
+      Personal guidance · Vedic insights
+    </span>
+  </div>
+
+  <svg
+    class="w-4 h-4 text-gold-500/40 group-hover:text-gold-400/70 transition-colors"
+    viewBox="0 0 10 10"
+    fill="none"
+  >
+    <path
+      d="M3 1L7 5L3 9"
+      stroke="currentColor"
+      stroke-width="1.5"
+      stroke-linecap="round"
+    />
+  </svg>
+</NuxtLink>
           </div>
 
           <!-- Feature Navigation -->

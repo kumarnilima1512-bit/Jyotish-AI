@@ -4,6 +4,11 @@ export default defineNuxtConfig({
   modules: ['@nuxtjs/tailwindcss', '@pinia/nuxt'],
   srcDir: 'app',
   //serverDir: 'app/server',
+
+  tailwindcss: {
+    configPath: 'tailwind.config.ts',
+    exposeConfig: true
+  },
  
   runtimeConfig: {
     geminiApiKey:           process.env.GEMINI_API_KEY         || '',
