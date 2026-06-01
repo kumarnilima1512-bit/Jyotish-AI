@@ -24,6 +24,16 @@ export default defineNuxtConfig({
     head: {
       title: 'JYOTISH : Vedic Birth Chart',
       link: [
+        {
+        rel: 'icon',
+        type: 'image/png',
+        href: '/images/JYOTISH-logo.png'
+        },
+         // iPhone / iPad home screen icon
+        // {
+        //   rel: 'apple-touch-icon',
+        //   href: '/images/JYOTISH-logo.png'
+        // },
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
         { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
         {
