@@ -1,5 +1,5 @@
 <script>
-import Index from './Pages/index.vue'
+import Index from './pages/index.vue'
 
 export default {
   components: {

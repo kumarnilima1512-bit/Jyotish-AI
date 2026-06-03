@@ -7,7 +7,7 @@
       muted
       playsinline
       class="absolute inset-0 w-full h-full object-cover"
-      style="opacity: 1.55; transform: scale(1.0); transform-origin: center center;"
+      style="opacity: 0.99; transform: scale(1.0); transform-origin: center center;"
     >
       <source src="/videos/astrobg.mp4" type="video/mp4"/>
     </video>
