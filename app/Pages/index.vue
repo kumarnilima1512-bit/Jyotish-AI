@@ -24,9 +24,9 @@
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         <!-- Left: Form -->
-        <div class="lg:col-span-1">
+        <!-- <div class="lg:col-span-1">
           <BirthForm :form-data="formData" :loading="loading" :error="error" @generate="generateChart"/>
-        </div>
+        </div> -->
 
         <!-- Right: Welcome + Feature buttons -->
         <div class="lg:col-span-2 space-y-4">
